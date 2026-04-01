@@ -16,8 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "E-commerce",
-  description: "An E-commerce website using Next.js and Firebase, with wish list functionality",
+  title: "Pit Lane Supply — F1 merch & grid gear",
+  description:
+    "F1-inspired merch, paddock picks, and cool grid gear. Sign in to save your wish list.",
 };
 
 export default function RootLayout({

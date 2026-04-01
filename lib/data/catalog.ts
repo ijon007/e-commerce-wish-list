@@ -7,27 +7,39 @@ export interface CatalogProduct {
 
 export const CATALOG: CatalogProduct[] = [
   {
-    id: "wave-desk",
-    name: "Wave Desk Lamp",
-    price: 42,
-    image: "https://picsum.photos/seed/wave-desk/400/300",
+    id: "grid-team-cap",
+    name: "Grid Series team cap",
+    price: 38,
+    image: "f1-caps.webp",
   },
   {
-    id: "ash-chair",
-    name: "Ash Reading Chair",
-    price: 189,
-    image: "https://picsum.photos/seed/ash-chair/400/300",
+    id: "scale-model-143",
+    name: "1:43 championship die-cast",
+    price: 64,
+    image: "diecast.webp",
   },
   {
-    id: "mono-mug",
-    name: "Mono Ceramic Mug",
-    price: 24,
-    image: "https://picsum.photos/seed/mono-mug/400/300",
+    id: "paddock-softshell",
+    name: "Paddock soft-shell jacket",
+    price: 179,
+    image: "jacket.webp",
   },
   {
-    id: "linen-tote",
-    name: "Linen Market Tote",
-    price: 36,
-    image: "https://picsum.photos/seed/linen-tote/400/300",
+    id: "helmet-desk-lamp",
+    name: "Mini helmet desk lamp",
+    price: 89,
+    image: "minihelmet.avif",
   },
+  {
+    id: "slick-mug",
+    name: "Slick-compound stack mug",
+    price: 22,
+    image: "mug.webp",
+  },
+  {
+    id: "circuit-poster",
+    name: "Circuit layout art print",
+    price: 48,
+    image: "print.webp",
+  }
 ];

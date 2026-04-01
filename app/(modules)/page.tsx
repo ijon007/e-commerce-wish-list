@@ -19,12 +19,15 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   setDoc,
+  updateDoc,
   writeBatch,
 } from "firebase/firestore";
-import { useCallback, useEffect, useState } from "react";
+import { Minus, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import LoadingIndicator from "@/components/custom/loading";
 
@@ -33,11 +36,12 @@ export interface WishListItem {
   name: string;
   price: number;
   image: string;
+  quantity: number;
 }
 
 function wishListItemFromFirestore(
   id: string,
-  v: { name?: unknown; price?: unknown; image?: unknown }
+  v: { name?: unknown; price?: unknown; image?: unknown; quantity?: unknown }
 ): WishListItem | null {
   if (
     typeof v.name !== "string" ||
@@ -46,7 +50,11 @@ function wishListItemFromFirestore(
   ) {
     return null;
   }
-  return { id, name: v.name, price: v.price, image: v.image };
+  let quantity = 1;
+  if (typeof v.quantity === "number" && Number.isFinite(v.quantity)) {
+    quantity = Math.max(1, Math.floor(v.quantity));
+  }
+  return { id, name: v.name, price: v.price, image: v.image, quantity };
 }
 
 function firestoreErrorMessage(err: unknown, fallback: string): string {
@@ -125,6 +133,11 @@ export default function ProductPage() {
     [wishListItems]
   );
 
+  const wishListTotalUnits = useMemo(
+    () => wishListItems.reduce((sum, item) => sum + item.quantity, 0),
+    [wishListItems]
+  );
+
   async function handleAdd(product: CatalogProduct) {
     await auth.authStateReady();
     const uid = auth.currentUser?.uid;
@@ -139,6 +152,7 @@ export default function ProductPage() {
         name: product.name,
         price: product.price,
         image: product.image,
+        quantity: 1,
       });
     } catch (err) {
       console.error(err);
@@ -161,6 +175,35 @@ export default function ProductPage() {
     } catch (err) {
       console.error(err);
       toast.error(firestoreErrorMessage(err, "Could not remove item"));
+    } finally {
+      setMutatingId(null);
+    }
+  }
+
+  async function handleAdjustQuantity(productId: string, delta: number) {
+    await auth.authStateReady();
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    setMutatingId(productId);
+    try {
+      const db = getDb();
+      const ref = doc(db, "wishlists", uid, "items", productId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return;
+      const raw = snap.data().quantity;
+      const current =
+        typeof raw === "number" && Number.isFinite(raw)
+          ? Math.max(1, Math.floor(raw))
+          : 1;
+      const next = current + delta;
+      if (next < 1) {
+        await deleteDoc(ref);
+      } else {
+        await updateDoc(ref, { quantity: next });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(firestoreErrorMessage(err, "Could not update quantity"));
     } finally {
       setMutatingId(null);
     }
@@ -198,13 +241,18 @@ export default function ProductPage() {
     <>
       <Navbar />
       <main className="mx-auto max-w-5xl px-6 py-10">
-        <h1 className="mb-8 text-2xl font-semibold tracking-tight">
-          Wish list shop
-        </h1>
+        <header className="mb-8 space-y-2 sm:mb-10">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Pit Lane Supply
+          </h1>
+          <p className="max-w-xl text-base leading-relaxed text-muted-foreground">
+            F1 merch and grid essentials — build your wish list.
+          </p>
+        </header>
         <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
           <section>
-            <h2 className="mb-4 text-sm font-medium text-muted-foreground">
-              Products
+            <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-foreground/90">
+              Paddock picks
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               {CATALOG.map((product) => {
@@ -249,7 +297,9 @@ export default function ProductPage() {
                   <CardDescription>
                     {wishListLoading
                       ? "Loading…"
-                      : `${wishListItems.length} saved`}
+                      : wishListItems.length === 0
+                        ? "Nothing saved yet"
+                        : `${wishListTotalUnits} item${wishListTotalUnits !== 1 ? "s" : ""} · ${wishListItems.length} product${wishListItems.length !== 1 ? "s" : ""}`}
                   </CardDescription>
                   <Button
                     variant="destructive"
@@ -283,7 +333,7 @@ export default function ProductPage() {
                       return (
                         <li
                           key={item.id}
-                          className="flex gap-3 rounded-md border border-border p-3"
+                          className="flex gap-3 rounded-md border border-border p-2"
                         >
                           <img
                             src={item.image}
@@ -296,17 +346,59 @@ export default function ProductPage() {
                             <p className="truncate font-medium">{item.name}</p>
                             <p className="text-sm text-muted-foreground">
                               ${item.price.toFixed(2)}
+                              {item.quantity > 1 ? (
+                                <span className="text-muted-foreground/80">
+                                  {" "}
+                                  × {item.quantity} · $
+                                  {(item.price * item.quantity).toFixed(2)}
+                                </span>
+                              ) : null}
                             </p>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="mt-2"
-                              disabled={busy || clearing}
-                              onClick={() => void handleRemove(item.id)}
-                            >
-                              <LoadingIndicator loading={busy} />
-                              Remove
-                            </Button>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <div
+                                className="inline-flex items-center rounded-md border border-border bg-muted/40"
+                                role="group"
+                                aria-label="Quantity"
+                              >
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  disabled={busy || clearing}
+                                  onClick={() =>
+                                    void handleAdjustQuantity(item.id, -1)
+                                  }
+                                  aria-label="Decrease quantity"
+                                >
+                                  <Minus className="size-3" />
+                                </Button>
+                                <span className="min-w-6 px-1 text-center text-xs tabular-nums text-muted-foreground">
+                                  {item.quantity}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  disabled={busy || clearing}
+                                  onClick={() =>
+                                    void handleAdjustQuantity(item.id, 1)
+                                  }
+                                  aria-label="Increase quantity"
+                                >
+                                  <Plus className="size-3" />
+                                </Button>
+                              </div>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="shrink-0"
+                                disabled={busy || clearing}
+                                onClick={() => void handleRemove(item.id)}
+                              >
+                                <LoadingIndicator loading={busy} />
+                                Remove
+                              </Button>
+                            </div>
                           </div>
                         </li>
                       );
