@@ -3,9 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import React from "react";
 import { AuthContextProvider } from "@/components/providers/authProvider";
+import { AppToaster } from "@/components/providers/app-toaster";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
 });
 
@@ -29,11 +30,12 @@ export default function RootLayout({
       <html
         suppressHydrationWarning
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+        className={`${geist.variable} ${geistMono.variable} h-full antialiased dark`}
       >
         <body className="min-h-full flex flex-col">
           <AuthContextProvider>
             {children}
+            <AppToaster />
           </AuthContextProvider>
         </body>
       </html>

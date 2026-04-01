@@ -1,7 +1,6 @@
 "use client"
 import { User } from "@/lib/domain/classes/user";
 import { onAuthStateChanged } from "firebase/auth";
-import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth } from "@/lib/firebase/client";
 
@@ -33,17 +32,13 @@ export const AuthContextProvider = (props: Properties) => {
     });
     const [loading, setLoading] = useState(true);
 
-    const router = useRouter();
-    const pathname = usePathname();
-
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 setUser({
                     email: user.email,
                     uid: user.uid,
                     name: user.displayName,
-
                 });
             } else {
                 setUser({ email: null, uid: null, name: null });
@@ -52,7 +47,7 @@ export const AuthContextProvider = (props: Properties) => {
         });
 
         return () => unsubscribe();
-    }, [pathname, router, user.uid]);
+    }, []);
 
     return (
         <AuthContext.Provider value={{ user, loading }}>
